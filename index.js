@@ -37,8 +37,15 @@ app.get('/', async function(req, res) {
 app.post('/', async function(req, res) {
     const origen = req.body.origen;
     const destino = req.body.destino;
-    await convertir(origen, destino);
-    res.json({ origen: origen, destino: destino })   
+	const id = req.body.id;
+	console.log(`${id} convertido`);
+	try {
+		await convertir(origen, destino, id);
+		res.json({ msg: id }) 
+	}catch(error)
+	{
+		res.json({ msg: error }) 
+	}
 })
 
 // iniciamos nuestro servidor
@@ -46,10 +53,10 @@ app.listen(port)
 console.log('API escuchando en el puerto ' + port)
 
 /* Función que convierte un documento word a pdf */
-async function convertir(origen, destino) {
+async function convertir(origen, destino, id) {
     const ext = '.pdf'
     const inputPath = origen; //path.join(__dirname, '/resources/2410015430-3De AudienciasJUAN CARLOS CASTRO VERGARA192578616-92665875.doc');
-    const outputPath = `${destino}${uuid.v4()}${ext}`; //path.join(__dirname, `/resources/${uuid.v4()}${ext}`);
+    const outputPath = `${destino}${id}${ext}`; //path.join(__dirname, `/resources/${uuid.v4()}${ext}`);
 
     // leer file
     const docxBuf = await fs.readFile(inputPath);
