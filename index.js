@@ -1,6 +1,6 @@
 /*
     Todos los derechos reservados para Mauricio Ortiz, Fiscalía Regional de la Araucanía.
-    MIT. (Desarrollo Open Source)
+    Licencia Copyleft. (Desarrollo Open Source)
 */
 
 'use strict';
@@ -67,3 +67,4 @@ async function convertir(origen, destino, id) {
     // Here in done you have pdf file which you can save or transfer in another stream
     await fs.writeFile(outputPath, pdfBuf);
 }
+
