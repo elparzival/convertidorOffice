@@ -8,6 +8,13 @@
 const path = require('path');
 const fs = require('fs').promises;
 
+/* montamos librería para logging */
+const winston = require('winston');
+const { combine, timestamp, json } = winston.format;
+
+/* montamos librería filebytes para saber tamaño de nuestros archivos */
+const fileBytes = require('file-bytes');
+
 /* montamos librería de openoffice */ 
 const libre = require('libreoffice-convert');
 libre.convertAsync = require('util').promisify(libre.convert);
@@ -30,7 +37,13 @@ var port = process.env.PORT || 8080  // establecemos nuestro puerto
 
 // GET
 app.get('/', async function(req, res) {
-    res.json({ mensaje: "API/CONVETIDOR ESTADO OK" })   
+
+    try {
+        res.json({ mensaje: "API/CONVETIDOR ESTADO OK" })   
+	}catch(error)
+	{
+		res.json({ msg: error.message }) 
+	}
 })
 
 // POST
@@ -38,33 +51,52 @@ app.post('/', async function(req, res) {
     const origen = req.body.origen;
     const destino = req.body.destino;
 	const id = req.body.id;
-	console.log(`${id} convertido`);
+    const ruc = req.body.ruc;
+    let result = 0;
 	try {
 		await convertir(origen, destino, id);
-		res.json({ msg: id }) 
+	        console.log(`${id} convertido`);
+	        const result = fileBytes.sync(origen);
+		res.json({ size: result }) 
 	}catch(error)
 	{
-		res.json({ msg: error }) 
+        const logger = winston.createLogger({
+            level: process.env.LOG_LEVEL || 'error',
+            defaultMeta: {
+                id: id,
+                ruc: ruc,
+                origen: origen,
+                destino: destino
+            },
+            format: combine(timestamp(), json()),
+            transports: [
+              new winston.transports.File({
+                filename: 'errors.log',
+              }),
+            ],
+        });
+        logger.error(error.message);
+		res.json({ msg: error.message }) 
 	}
 })
 
 // iniciamos nuestro servidor
 app.listen(port)
-console.log('API escuchando en el puerto ' + port)
+console.log('API CONVERTIDOR puerto ' + port)
 
 /* Función que convierte un documento word a pdf */
 async function convertir(origen, destino, id) {
     const ext = '.pdf'
-    const inputPath = origen; //path.join(__dirname, '/resources/2410015430-3De AudienciasJUAN CARLOS CASTRO VERGARA192578616-92665875.doc');
-    const outputPath = `${destino}${id}${ext}`; //path.join(__dirname, `/resources/${uuid.v4()}${ext}`);
+    const inputPath = origen; 
+    const outputPath = `${destino}${id}${ext}`; 
 
     // leer file
     const docxBuf = await fs.readFile(inputPath);
-
-    // Convertir a pdf (see Libreoffice docs about filter)
+    
+    // Convertir a pdf
     let pdfBuf = await libre.convertAsync(docxBuf, ext, undefined);
     
-    // Here in done you have pdf file which you can save or transfer in another stream
+    //Crea el stream de bytes como resultado
     await fs.writeFile(outputPath, pdfBuf);
 }
 
